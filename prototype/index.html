@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequined Private Journal</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4B0082, #8A2BE2); /* Dark purple gradient background */
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sequined cover effect */
+        .cover {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background: linear-gradient(45deg, #8A2BE2, #4B0082); /* Violet to purple gradient front */
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.5s;
+        }
+        
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, #00BFFF, #4B0082); /* Cerulean to indigo back */
+            opacity: 0;
+            transition: opacity 0.5s;
+            border-radius: 10px;
+        }
+        
+        .cover:hover::before {
+            opacity: 1;
+        }
+        
+        /* Sequins simulation with CSS */
+        .sequins {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px);
+            background-size: 10px 10px;
+            border-radius: 10px;
+        }
+        
+        .lock {
+            font-size: 100px;
+            color: gold;
+            z-index: 1;
+        }
+        
+        .journal {
+            display: none;
+            width: 400px;
+            height: 600px;
+            background: #f5f5dc; /* Parchment-like paper */
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        
+        .journal textarea {
+            width: 100%;
+            height: 300px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 16px;
+            resize: none;
+        }
+        
+        .journal button {
+            margin: 10px 5px;
+            padding: 10px;
+            background: #8A2BE2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .journal button:hover {
+            background: #4B0082;
+        }
+        
+        .pages {
+            margin-top: 20px;
+        }
+        
+        .page {
+            border-bottom: 1px solid #ccc;
+            padding: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="cover" id="cover">
+        <div class="sequins"></div>
+        <div class="lock" id="lock">🔒</div>
+    </div>
+    
+    <div class="journal" id="journal">
+        <h2>My Private Journal</h2>
+        <p>Write your thoughts here (max 1000 pages). Private by default.</p>
+        <textarea id="entry" placeholder="Start writing..."></textarea>
+        <button id="save">Save Entry</button>
+        <button id="export">Make Public (Download)</button>
+        <div class="pages" id="pages"></div>
+    </div>
+
+    <script>
+        const cover = document.getElementById('cover');
+        const lock = document.getElementById('lock');
+        const journal = document.getElementById('journal');
+        const entry = document.getElementById('entry');
+        const saveBtn = document.getElementById('save');
+        const exportBtn = document.getElementById('export');
+        const pagesDiv = document.getElementById('pages');
+        
+        let pages = JSON.parse(localStorage.getItem('journalPages')) || [];
+        let pageCount = pages.length;
+        
+        // Load existing pages
+        function loadPages() {
+            pagesDiv.innerHTML = '';
+            pages.forEach((page, index) => {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'page';
+                pageDiv.innerHTML = `<strong>Page ${index + 1}:</strong><br>${page}`;
+                pagesDiv.appendChild(pageDiv);
+            });
+        }
+        loadPages();
+        
+        // Unlock the journal
+        cover.addEventListener('click', () => {
+            cover.style.transform = 'rotateY(180deg)';
+            setTimeout(() => {
+                cover.style.display = 'none';
+                journal.style.display = 'block';
+            }, 250);
+        });
+        
+        // Save entry
+        saveBtn.addEventListener('click', () => {
+            if (pageCount >= 1000) {
+                alert('Maximum 1000 pages reached!');
+                return;
+            }
+            if (entry.value.trim()) {
+                pages.push(entry.value);
+                pageCount++;
+                localStorage.setItem('journalPages', JSON.stringify(pages));
+                entry.value = '';
+                loadPages();
+            }
+        });
+        
+        // Export (make "public" by downloading)
+        exportBtn.addEventListener('click', () => {
+            const data = pages.join('\n\n--- Page Break ---\n\n');
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'my_journal.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
