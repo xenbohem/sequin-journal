@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Fantasy Sparkle Sequins (Style 2)</title>
+
+<style>
+body {
+  background: #0d0820;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  font-family: sans-serif;
+}
+
+/* Sparkling gradient background */
+.panel {
+  width: 420px;
+  height: 260px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 6px;
+  padding: 20px;
+  border-radius: 16px;
+
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.4), transparent 35%),
+    radial-gradient(circle at 80% 30%, rgba(255,255,180,0.3), transparent 40%),
+    radial-gradient(circle at 50% 70%, rgba(180,120,255,0.25), transparent 40%),
+    radial-gradient(circle at 10% 80%, rgba(255,200,255,0.35), transparent 50%),
+    linear-gradient(135deg, #4d2a7f, #1b0f33);
+  background-size: cover;
+  background-blend-mode: screen;
+  box-shadow: 0 0 40px rgba(140,80,255,0.5);
+}
+
+/* Individual sequins */
+.sequin {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.25s ease, background 0.25s ease;
+  position: relative;
+  transform-style: preserve-3d;
+
+  /* FRONT (purple) */
+  background: radial-gradient(
+    circle at 30% 30%,
+    #c488ff,
+    #8946d8 60%,
+    #3b165d 100%
+  );
+}
+
+/* BACK (indigo) becomes visible when rotated */
+.sequin.flipped {
+  background: radial-gradient(
+    circle at 70% 70%,
+    #5a61ff,
+    #3237a0 60%,
+    #141852 100%
+  );
+}
+
+.sequin:hover {
+  transform: rotateX(55deg);
+}
+
+/* Sparkle glint effect on each sequin */
+.sequin::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.8), transparent 40%),
+    radial-gradient(circle at 65% 70%, rgba(255,255,255,0.35), transparent 60%);
+  opacity: 0.6;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="panel" id="panel"></div>
+
+<script>
+// Create 80 sequins quickly
+const panel = document.getElementById("panel");
+for (let i = 0; i < 80; i++) {
+  const s = document.createElement("div");
+  s.className = "sequin";
+
+  // Hover flip (temporary)
+  s.addEventListener("mouseenter", () => {
+    if (!s.dataset.locked) s.classList.add("flipped");
+  });
+
+  s.addEventListener("mouseleave", () => {
+    if (!s.dataset.locked) s.classList.remove("flipped");
+  });
+
+  // Click = flip to INDIGO & stay
+  s.addEventListener("click", () => {
+    s.classList.add("flipped");
+    s.dataset.locked = "true"; // stay indigo
+  });
+
+  // Double-click = flip back to PURPLE
+  s.addEventListener("dblclick", () => {
+    s.classList.remove("flipped");
+    delete s.dataset.locked;
+  });
+
+  panel.appendChild(s);
+}
+</script>
+
+</body>
+</html>
