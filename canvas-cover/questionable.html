@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Fantasy Card Sequin Drawing Pad</title>
+
+<style>
+body {
+  background: #0d0820;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* CARD SHAPE */
+.fantasy-card {
+  width: 380px;  /* tall card proportion */
+  height: 560px;
+  border-radius: 28px;
+  padding: 20px;
+  position: relative;
+  background: linear-gradient(145deg, #3b1761, #1b0f33);
+  box-shadow: 0 0 60px rgba(180,140,255,0.5);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* Decorative filigree borders (top & bottom) */
+.fantasy-card::before,
+.fantasy-card::after {
+  content:"";
+  position: absolute;
+  width: 100%;
+  height: 50px;
+  left: 0;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(255,255,255,0.3), transparent 50%),
+    radial-gradient(circle at 90% 50%, rgba(180,140,255,0.25), transparent 50%);
+}
+.fantasy-card::before { top:0; border-top-left-radius:28px; border-top-right-radius:28px;}
+.fantasy-card::after { bottom:0; border-bottom-left-radius:28px; border-bottom-right-radius:28px;}
+
+/* SEQUIN PANEL (drawing area) */
+.panel {
+  margin-top: 60px;
+  margin-bottom: 60px;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(14, 1fr);
+  gap: 6px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.25), transparent 35%),
+    radial-gradient(circle at 80% 30%, rgba(255,255,180,0.2), transparent 40%),
+    linear-gradient(135deg, #4d2a7f, #1b0f33);
+  background-blend-mode: screen;
+  padding: 15px;
+  box-shadow: 0 0 25px rgba(140,80,255,0.3);
+}
+
+/* SEQUINS */
+.sequin {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease, background 0.25s ease;
+  background: radial-gradient(circle at 30% 30%, #c488ff, #8946d8 60%, #3b165d 100%);
+}
+
+.sequin.flipped {
+  background: radial-gradient(circle at 70% 70%, #5a61ff, #3237a0 60%, #141852 100%);
+}
+
+.sequin::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.8), transparent 40%),
+    radial-gradient(circle at 65% 70%, rgba(255,255,255,0.35), transparent 60%);
+  opacity:0.6;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+<div class="fantasy-card">
+  <div class="panel" id="panel"></div>
+</div>
+
+<script>
+const panel = document.getElementById("panel");
+const totalSequins = 140; // 10x14 grid
+
+// Create sequins
+for(let i=0;i<totalSequins;i++){
+  const s = document.createElement("div");
+  s.className = "sequin";
+  panel.appendChild(s);
+}
+
+// DRAWING LOGIC
+let isDragging = false;
+let lastX = null;
+
+panel.addEventListener("pointerdown", e => {
+  isDragging = true;
+  lastX = e.clientX;
+});
+
+panel.addEventListener("pointerup", e => {
+  isDragging = false;
+  lastX = null;
+});
+
+panel.addEventListener("pointerleave", e => {
+  isDragging = false;
+  lastX = null;
+});
+
+panel.addEventListener("pointermove", e => {
+  if(!isDragging) return;
+  const dx = e.clientX - lastX;
+  lastX = e.clientX;
+
+  const sequins = Array.from(panel.children);
+  sequins.forEach(s => {
+    const rect = s.getBoundingClientRect();
+    if(e.clientX >= rect.left && e.clientX <= rect.right &&
+       e.clientY >= rect.top && e.clientY <= rect.bottom){
+      if(dx > 0) s.classList.add("flipped");     // swipe right → paint indigo
+      else if(dx < 0) s.classList.remove("flipped"); // swipe left → revert purple
+    }
+  });
+});
+</script>
+</body>
+</html>
