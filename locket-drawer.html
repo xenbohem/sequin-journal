@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Fairy Journal — Sequin Card with Drawer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --card-w: 380px;
+    --card-h: 560px;
+    --panel-cols: 10;
+    --panel-rows: 14;
+    --total-pages: 500;
+    --drawer-w: 340px; /* width of revealed drawer */
+    --brass: #b7852f;
+    --brass-dark: #7a541b;
+    --paper-edge: rgba(240,230,220,0.7);
+  }
+
+  /* page background */
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: radial-gradient(circle at 10% 10%, #12061a 0%, #0b0410 40%), #08030a;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    overflow:hidden;
+  }
+
+  .stage{
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:24px;
+    padding:48px;
+    box-sizing:border-box;
+  }
+
+  /* CARD (left) */
+  .fantasy-card{
+    width:var(--card-w);
+    height:var(--card-h);
+    border-radius:28px;
+    padding:20px;
+    position:relative;
+    background: linear-gradient(145deg,#3b1761,#1b0f33);
+    box-shadow: 0 20px 60px rgba(140,80,255,0.25);
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    z-index:20;
+  }
+
+  .fantasy-card::before,
+  .fantasy-card::after{
+    content:"";
+    position:absolute;
+    width:100%;
+    height:48px;
+    left:0;
+    background:
+      radial-gradient(circle at 10% 50%, rgba(255,255,255,0.18), transparent 55%),
+      radial-gradient(circle at 90% 50%, rgba(180,140,255,0.12), transparent 55%);
+  }
+  .fantasy-card::before{ top:0; border-top-left-radius:28px; border-top-right-radius:28px; }
+  .fantasy-card::after{ bottom:0; border-bottom-left-radius:28px; border-bottom-right-radius:28px; }
+
+  .card-title{
+    text-align:center;
+    font-size:1.5rem;
+    color:#f6e9ff;
+    text-shadow: 0 0 8px rgba(200,160,255,0.6);
+    pointer-events:none;
+    padding-bottom:6px;
+  }
+
+  /* panel (sequins) */
+  .panel{
+    border-radius:18px;
+    display:grid;
+    grid-template-columns: repeat(var(--panel-cols), 1fr);
+    grid-template-rows: repeat(var(--panel-rows), 1fr);
+    gap:6px;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,0.18), transparent 40%),
+      radial-gradient(circle at 80% 30%, rgba(255,255,180,0.12), transparent 40%),
+      linear-gradient(135deg,#4d2a7f,#1b0f33);
+    background-blend-mode: screen;
+    padding:14px;
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.35);
+    align-self:center;
+  }
+
+  .sequin{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    position:relative;
+    cursor:pointer;
+    transition:transform .2s ease, background .22s ease;
+    background: radial-gradient(circle at 30% 30%, #c488ff, #8946d8 60%, #3b165d 100%);
+  }
+  .sequin.flipped{
+    background: radial-gradient(circle at 70% 70%, #5a61ff,#3237a0 60%,#141852 100%);
+  }
+  .sequin::after{
+    content:"";
+    position:absolute; inset:0; border-radius:50%;
+    background:
+      radial-gradient(circle at 25% 25%, rgba(255,255,255,0.85), transparent 40%),
+      radial-gradient(circle at 65% 70%, rgba(255,255,255,0.36), transparent 60%);
+    mix-blend-mode:screen; opacity:.7; pointer-events:none;
+  }
+
+  /* sparkle */
+  .sparkle{
+    position:fixed; width:6px; height:6px; border-radius:50%;
+    background: radial-gradient(circle, rgba(255,255,255,1) 30%, rgba(255,255,255,0.05) 70%);
+    pointer-events:none; transform:translate(-50%,-50%); z-index:1000;
+    filter:drop-shadow(0 0 6px rgba(255,255,255,.9));
+    animation: sparkle-fade 1.4s ease-out forwards;
+  }
+  @keyframes sparkle-fade{
+    0% { opacity:1; transform: translate(-50%,-50%) scale(1); }
+    100% { opacity:0; transform: translate(-50%,-120%) scale(1.6); }
+  }
+
+  /* RIGHT area includes the hidden drawer */
+  .drawer-wrap{
+    width: var(--drawer-w);
+    height: var(--card-h);
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    pointer-events:none; /* until opened, click goes to lock only */
+  }
+
+  /* the lock hangs on the edge of the card; it's clickable */
+  .lock-hinge{
+    position:absolute;
+    right: calc(var(--drawer-w) - 20px); /* place near where drawer will appear */
+    top: calc(50% - 22px);
+    width: 40px;
+    height: 44px;
+    transform-origin: left center;
+    z-index:40;
+    pointer-events:auto;
+  }
+
+  .lock-button{
+    position:relative;
+    left: 6px;
+    width:34px; height:34px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transform-origin: center;
+    transition: transform .28s cubic-bezier(.2,.9,.1,1);
+  }
+
+  /* small chain */
+  .lock-chain{
+    position:absolute; left:10px; top:-22px; width:2px; height:18px;
+    background: linear-gradient(#cfa95b,#8a5f23);
+    transform-origin: top center;
+    border-radius:1px;
+  }
+
+  /* brass lock look - made with CSS layers + pseudo */
+  .lock-body{
+    width:24px; height:22px; border-radius:5px; background: linear-gradient(#d3a95a,#b07d2a);
+    border:1px solid rgba(0,0,0,0.18);
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.15), 0 3px 8px rgba(0,0,0,0.25);
+    position:relative;
+  }
+  .lock-body::before{ /* keyhole plate */
+    content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-30%);
+    width:8px; height:10px; background:linear-gradient(#2b1808,#1b0f07); border-radius:2px;
+    box-shadow: inset 0 1px rgba(255,255,255,0.05);
+  }
+  .lock-shackle{
+    position:absolute; left:50%; top:-10px; transform:translateX(-50%); width:18px; height:14px;
+    border:3px solid var(--brass-dark); border-bottom: none; border-radius: 14px 14px 0 0;
+    background: transparent;
+  }
+
+  /* hinge + dangling swing when open */
+  .lock-open .lock-button{ transform: rotate(22deg) translate(4px,-2px); }
+  .lock-open .lock-chain{ transform: rotate(20deg) translateY(6px); }
+
+  /* Drawer panel (starts hidden - translated right) */
+  .drawer{
+    position:absolute;
+    right:0;
+    top:0;
+    width:var(--drawer-w);
+    height:100%;
+    background: linear-gradient(180deg,#fff,#fff); /* will style inside */
+    transform: translateX(calc(100% - 40px)); /* mostly hidden; peek of spine */
+    transition: transform .42s cubic-bezier(.22,.98,.35,1), box-shadow .3s;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(10,6,12,0.45);
+    pointer-events:auto;
+    overflow:hidden;
+    z-index:30;
+  }
+
+  .drawer.open{ transform: translateX(0); box-shadow: 0 25px 90px rgba(10,6,12,0.6); }
+
+  /* drawer interior layout */
+  .drawer-inner{
+    height:100%; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px;
+    background: linear-gradient(180deg, rgba(250,250,250,0.98), rgba(250,248,244,0.98));
+  }
+
+  /* faux page-stack visual on left of drawer */
+  .page-stack{
+    width:68px; height:100%; position:relative; border-radius:8px; background: linear-gradient(180deg,#fcfbf8,#f6f2ee);
+    box-shadow: inset 0 0 0 1px rgba(200,190,180,0.15), 0 6px 18px rgba(0,0,0,0.15);
+    overflow:hidden; flex:0 0 68px;
+  }
+  /* create many thin lines to emulate 500 sheets edges */
+  .page-stack::before{
+    content:"";
+    position:absolute; left:8px; top:8px; right:8px; bottom:8px;
+    background:
+      repeating-linear-gradient(180deg, rgba(230,220,210,0.6) 0 1px, transparent 1px 6px);
+    opacity:0.6;
+    filter: blur(0.2px);
+  }
+
+  .page-area{ flex:1; padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+
+  /* single page UI */
+  .page{
+    background: linear-gradient(180deg,#fff,#fff);
+    border-radius:10px; padding:16px; box-shadow: 0 6px 22px rgba(20,10,20,0.06);
+    min-height:220px; max-width:540px; width:100%;
+    border: 1px solid rgba(200,190,180,0.18);
+    box-sizing:border-box;
+    position:relative;
+  }
+
+  .page .date-row{ display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .page label{ font-size:12px; color:#6b5a66; }
+  .page input[type="date"], .page input[type="text"]{
+    width:220px; padding:6px 8px; border-radius:6px; border:1px solid rgba(120,110,130,0.12);
+    background: linear-gradient(180deg,#fff,#fdfbf9); font-size:14px;
+  }
+  .page input.title{ width:100%; font-weight:600; padding:8px; }
+
+  .page textarea{
+    width:100%; min-height:180px; resize:vertical; padding:10px; border-radius:8px; border:1px solid rgba(140,120,140,0.08);
+    font-size:14px; line-height:1.45; background: linear-gradient(180deg,#fff,#fff);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  /* vintage paper edge effect (subtle) */
+  .page.vintage{
+    box-shadow:
+      0 8px 22px rgba(30,14,50,0.06),
+      inset 0 0 0 1px rgba(220,210,195,0.18);
+  }
+  .page.vintage::after{
+    content:""; position:absolute; left:6px; right:6px; bottom:8px; height:12px;
+    background: linear-gradient(180deg, rgba(250,246,240,0.95), rgba(245,240,230,0.4));
+    border-radius:6px;
+    pointer-events:none; opacity:.8;
+  }
+
+  /* page controls */
+  .page-controls{ display:flex; gap:8px; align-items:center; justify-content:flex-end; padding-top:6px; }
+  .btn{ background:linear-gradient(180deg,#fff,#f6f3ee); border:1px solid rgba(180,170,160,0.2); padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px;}
+  .btn.secondary{ background:transparent; border:1px solid rgba(255,255,255,0.04); color:#fff; }
+
+  .page-footer{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; color:#5c5260; padding-top:6px; }
+
+  /* compact controls row at top of drawer */
+  .drawer-top { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+  .small{ font-size:12px; color:#4f3f54; }
+
+  /* responsive adjustments */
+  @media (max-width:920px){
+    :root{ --drawer-w: 300px; }
+    .stage{ padding:24px; gap:12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <!-- Card -->
+    <div class="fantasy-card" id="card">
+      <div class="card-title">✨ My Fairy Journal ✨</div>
+      <div class="panel" id="panel"></div>
+    </div>
+
+    <!-- Drawer and lock area -->
+    <div class="drawer-wrap" aria-hidden="true">
+      <!-- Lock hinge sits visually attached to the card edge -->
+      <div class="lock-hinge" id="lockHinge" role="button" aria-label="Open journal drawer">
+        <div class="lock-chain"></div>
+        <div class="lock-button" id="lockBtn" title="Toggle drawer">
+          <div class="lock-body" aria-hidden="true"></div>
+          <div class="lock-shackle" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- Drawer -->
+      <div class="drawer" id="drawer" aria-hidden="true">
+        <div class="drawer-inner">
+          <div class="drawer-top">
+            <div class="small">Hidden Drawer</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="small">Pages <strong id="pageCountSpan">0/0</strong></div>
+              <button class="btn" id="closeDrawerBtn" title="Close drawer">Close</button>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:stretch; flex:1;">
+            <div class="page-stack" aria-hidden="true"></div>
+
+            <div class="page-area" id="pageArea" style="flex:1;">
+              <!-- current page rendered here -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------- Sequins + Sparkles (existing drawing pad behavior) ---------- */
+const panel = document.getElementById('panel');
+const cols = 10, rows = 14;
+const totalSequins = cols * rows;
+
+// create sequins
+for(let i=0;i<totalSequins;i++){
+  const s = document.createElement('div');
+  s.className = 'sequin';
+  panel.appendChild(s);
+}
+
+let isDragging = false;
+let lastX = null;
+function updateSequin(el, dx){
+  if(dx === 0) el.classList.toggle('flipped');
+  else if(dx > 0) el.classList.add('flipped');
+  else el.classList.remove('flipped');
+}
+
+/* sparkles */
+function createSparkle(x,y){
+  const sp = document.createElement('div');
+  sp.className = 'sparkle';
+  sp.style.left = x + 'px';
+  sp.style.top = y + 'px';
+  document.body.appendChild(sp);
+  setTimeout(()=> sp.remove(), 1500);
+}
+let sparkleCooldown = 0;
+
+/* pointer events for drawing */
+panel.addEventListener('pointerdown', e => {
+  isDragging = true;
+  lastX = e.clientX;
+
+  // immediate toggle on click
+  Array.from(panel.children).forEach(s=>{
+    const r = s.getBoundingClientRect();
+    if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+      updateSequin(s, 0);
+    }
+  });
+});
+panel.addEventListener('pointerup', ()=> { isDragging=false; lastX=null; });
+panel.addEventListener('pointerleave', ()=> { isDragging=false; lastX=null; });
+
+panel.addEventListener('pointermove', e => {
+  if(!isDragging) return;
+  const dx = e.clientX - lastX;
+  lastX = e.clientX;
+  Array.from(panel.children).forEach(s=>{
+    const r = s.getBoundingClientRect();
+    if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+      updateSequin(s, dx);
+    }
+  });
+  const now = performance.now();
+  if(now - sparkleCooldown > 40){
+    createSparkle(e.clientX, e.clientY);
+    sparkleCooldown = now;
+  }
+});
+
+/* ---------- Drawer logic + pages ---------- */
+const lockBtn = document.getElementById('lockBtn');
+const lockHinge = document.getElementById('lockHinge');
+const drawer = document.getElementById('drawer');
+const pageArea = document.getElementById('pageArea');
+const pageCountSpan = document.getElementById('pageCountSpan');
+const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+
+const PAGES = Number(getComputedStyle(document.documentElement).getPropertyValue('--total-pages')) || 500;
+pageCountSpan.textContent = `1/${PAGES}`;
+
+/* state */
+let drawerOpen = false;
+let currentPageIndex = 0;
+
+/* simple storage: load/save minimal data for 500 pages */
+const STORAGE_KEY = 'fairy_journal_pages_v1';
+let pages = new Array(PAGES).fill(null); // each slot will be {date, title, body}
+
+/* try to restore from localStorage */
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if(saved){
+    const parsed = JSON.parse(saved);
+    if(Array.isArray(parsed) && parsed.length === PAGES){
+      pages = parsed;
+    }
+  }
+} catch(e){ console.warn('restore failed', e); }
+
+/* toggle drawer when lock clicked */
+function setLockOpen(open){
+  drawerOpen = open;
+  drawer.classList.toggle('open', open);
+  document.body.style.pointerEvents = open ? 'auto' : ''; // keep interactions
+  lockHinge.classList.toggle('lock-open', open);
+  drawer.setAttribute('aria-hidden', !open);
+  // ensure drawer controls focus
+  if(open) renderPage(currentPageIndex);
+}
+
+lockBtn.addEventListener('click', (ev)=>{
+  ev.stopPropagation();
+  setLockOpen(!drawerOpen);
+});
+
+/* close button */
+closeDrawerBtn.addEventListener('click', ()=> setLockOpen(false));
+
+/* render UI for a given page index (0-based) */
+function renderPage(index){
+  currentPageIndex = Math.max(0, Math.min(PAGES-1, index));
+  pageCountSpan.textContent = `${currentPageIndex+1}/${PAGES}`;
+
+  // ensure array slot exists
+  if(!pages[currentPageIndex]) pages[currentPageIndex] = { date: new Date().toISOString().slice(0,10), title: '', body: '' };
+
+  // build page DOM (replace content)
+  pageArea.innerHTML = '';
+
+  const pageWrap = document.createElement('div');
+  pageWrap.className = 'page vintage';
+
+  // date row
+  const dateRow = document.createElement('div');
+  dateRow.className = 'date-row';
+  const dateLabel = document.createElement('label');
+  dateLabel.textContent = 'Date';
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.value = pages[currentPageIndex].date || new Date().toISOString().slice(0,10);
+  dateInput.addEventListener('change', ()=> {
+    pages[currentPageIndex].date = dateInput.value; savePages();
+  });
+  dateRow.appendChild(dateLabel);
+  dateRow.appendChild(dateInput);
+
+  // title
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.placeholder = 'Entry title';
+  titleInput.className = 'title';
+  titleInput.value = pages[currentPageIndex].title || '';
+  titleInput.addEventListener('input', ()=> {
+    pages[currentPageIndex].title = titleInput.value; savePages();
+  });
+
+  // textarea
+  const ta = document.createElement('textarea');
+  ta.placeholder = 'Write your thoughts...';
+  ta.value = pages[currentPageIndex].body || '';
+  ta.addEventListener('input', ()=> {
+    pages[currentPageIndex].body = ta.value; savePages();
+  });
+
+  // controls (prev/next/jump)
+  const controls = document.createElement('div');
+  controls.className = 'page-controls';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'btn';
+  prevBtn.textContent = '← Prev';
+  prevBtn.addEventListener('click', ()=> { renderPage(currentPageIndex-1); });
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'btn';
+  nextBtn.textContent = 'Next →';
+  nextBtn.addEventListener('click', ()=> { renderPage(currentPageIndex+1); });
+
+  const jumpInput = document.createElement('input');
+  jumpInput.type = 'number';
+  jumpInput.min = 1;
+  jumpInput.max = PAGES;
+  jumpInput.value = currentPageIndex+1;
+  jumpInput.style.width = '70px';
+  jumpInput.addEventListener('change', ()=> {
+    const v = Math.max(1, Math.min(PAGES, Number(jumpInput.value) || 1));
+    renderPage(v-1);
+  });
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn';
+  saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', ()=> { savePages(); saveFeedback(); });
+
+  controls.appendChild(prevBtn);
+  controls.appendChild(nextBtn);
+  controls.appendChild(jumpInput);
+  controls.appendChild(saveBtn);
+
+  // footer
+  const footer = document.createElement('div');
+  footer.className = 'page-footer';
+  footer.innerHTML = `<div>Page ${currentPageIndex+1} of ${PAGES}</div><div class="small">Vintage style • Slight cream edge</div>`;
+
+  // assemble
+  pageWrap.appendChild(dateRow);
+  pageWrap.appendChild(titleInput);
+  pageWrap.appendChild(ta);
+  pageArea.appendChild(pageWrap);
+  pageArea.appendChild(controls);
+  pageArea.appendChild(footer);
+
+  // focus textarea if newly created
+  ta.focus();
+}
+
+/* save pages to localStorage */
+function savePages(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
+  }catch(e){ console.warn('save failed', e); }
+}
+
+/* tiny save animation/feedback */
+function saveFeedback(){
+  // a quick subtle highlight on stack to show saved
+  const stack = document.querySelector('.page-stack');
+  stack.style.boxShadow = 'inset 0 0 0 2px rgba(180,130,255,0.18)';
+  setTimeout(()=> stack.style.boxShadow = 'inset 0 0 0 1px rgba(200,190,180,0.15), 0 6px 18px rgba(0,0,0,0.15)', 400);
+}
+
+/* initialize page count and default page */
+document.addEventListener('DOMContentLoaded', ()=> {
+  // ensure pages array length correct (if older storage different length)
+  if(pages.length !== PAGES){
+    const newPages = new Array(PAGES).fill(null);
+    for(let i=0;i<Math.min(pages.length,PAGES);i++) newPages[i] = pages[i];
+    pages = newPages;
+  }
+  pageCountSpan.textContent = `1/${PAGES}`;
+  // render nothing until drawer opened
+});
+
+/* click outside drawer closes it */
+document.addEventListener('click', (e)=>{
+  if(!drawerOpen) return;
+  const withinDrawer = drawer.contains(e.target) || lockHinge.contains(e.target) || panel.contains(e.target);
+  if(!withinDrawer){
+    setLockOpen(false);
+  }
+});
+
+/* keyboard navigation while drawer open */
+document.addEventListener('keydown', (e)=>{
+  if(!drawerOpen) return;
+  if(e.key === 'ArrowRight') renderPage(currentPageIndex+1);
+  if(e.key === 'ArrowLeft') renderPage(currentPageIndex-1);
+  if(e.key === 'Escape') setLockOpen(false);
+});
+</script>
+</body>
+</html>
