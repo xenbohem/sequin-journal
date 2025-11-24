@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequin Fairy Journal</title>
+<style>
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #9b59b6, #8e44ad, #5dade2);
+    font-family: 'Georgia', serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Sequin Book Cover */
+  #book-cover {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    background: #7d3c98;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  /* Decorative sequin layer */
+  .sequin {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: purple;
+    transition: transform 0.3s, background 0.3s;
+  }
+  .sequin.flipped {
+    background: indigo;
+    transform: rotateY(180deg);
+  }
+
+  /* Top title area */
+  #title-bar {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 24px;
+    color: gold;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px black;
+  }
+
+  /* Lock */
+  #book-lock {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: gold;
+    border-radius: 50%;
+    box-shadow: 0 0 5px black;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+  }
+
+  /* Drawer */
+  #drawer {
+    position: absolute;
+    top: 0;
+    right: -400px; /* hidden offscreen */
+    width: 400px;
+    height: 100%;
+    background: #fffaf0;
+    border-radius: 0 20px 20px 0;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.4);
+    transition: right 0.5s;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  /* Passcode modal */
+  #passcode-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+  }
+  #passcode-modal .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+  }
+
+  /* Page styles */
+  .journal-page {
+    margin-bottom: 15px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    background: #fffdfa;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .journal-page input {
+    width: 100%;
+    padding: 5px;
+    font-size: 16px;
+    margin-bottom: 5px;
+  }
+
+  .journal-page textarea {
+    width: 100%;
+    height: 60px;
+    font-size: 14px;
+  }
+
+  /* Navigation buttons */
+  #nav-buttons {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+  }
+  #nav-buttons button {
+    padding: 10px;
+    margin-right: 5px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="book-cover">
+  <div id="title-bar">Fairy Journal</div>
+
+  <!-- Lock -->
+  <div id="book-lock">🔒</div>
+
+  <!-- Sequin layer -->
+</div>
+
+<!-- Drawer -->
+<div id="drawer">
+  <h2>Journal Pages</h2>
+  <div id="pages-container"></div>
+  <button id="export-json">Export JSON</button>
+  <button id="export-pdf">Export PDF</button>
+</div>
+
+<!-- Passcode modal -->
+<div id="passcode-modal">
+  <div class="modal-content">
+    <p id="passcode-prompt">Enter 4-letter passcode:</p>
+    <input type="text" id="passcode-input" maxlength="4" />
+    <br><br>
+    <button id="passcode-submit">Submit</button>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div id="nav-buttons">
+  <button id="go-front">📖 Cover</button>
+</div>
+
+<script>
+  // --------------------
+  // Sequins
+  const book = document.getElementById('book-cover');
+  for (let i = 0; i < 300; i++) {
+    const s = document.createElement('div');
+    s.className = 'sequin';
+    s.style.top = Math.random() * 580 + 'px';
+    s.style.left = Math.random() * 380 + 'px';
+    book.appendChild(s);
+
+    s.addEventListener('click', () => {
+      s.classList.toggle('flipped');
+    });
+  }
+
+  // --------------------
+  // Drawer + Lock + Passcode
+  const lock = document.getElementById('book-lock');
+  const drawer = document.getElementById('drawer');
+  const modal = document.getElementById('passcode-modal');
+  const input = document.getElementById('passcode-input');
+  const submit = document.getElementById('passcode-submit');
+  const promptText = document.getElementById('passcode-prompt');
+
+  let storedPasscode = localStorage.getItem('bookPasscode');
+  let drawerOpen = false;
+
+  lock.addEventListener('click', () => {
+    modal.style.display = 'flex';
+    input.value = '';
+    input.focus();
+    promptText.innerText = storedPasscode ? 'Enter 4-letter passcode:' : 'Set a new 4-letter passcode:';
+  });
+
+  submit.addEventListener('click', () => {
+    const value = input.value.trim();
+    if (!value || value.length !== 4) {
+      alert('Passcode must be 4 letters.');
+      return;
+    }
+    if (!storedPasscode) {
+      // First-time setup
+      localStorage.setItem('bookPasscode', value);
+      storedPasscode = value;
+      alert('Passcode set!');
+      modal.style.display = 'none';
+      toggleDrawer();
+    } else if (value === storedPasscode) {
+      modal.style.display = 'none';
+      toggleDrawer();
+    } else {
+      alert('Incorrect passcode.');
+    }
+  });
+
+  function toggleDrawer() {
+    drawer.style.right = drawerOpen ? '-400px' : '0px';
+    drawerOpen = !drawerOpen;
+  }
+
+  // --------------------
+  // Pages
+  const pagesContainer = document.getElementById('pages-container');
+
+  function createPage(date='', title='', content='') {
+    const page = document.createElement('div');
+    page.className = 'journal-page';
+    page.innerHTML = `
+      <input type="date" value="${date}">
+      <input type="text" placeholder="Title" value="${title}">
+      <textarea placeholder="Write your journal...">${content}</textarea>
+    `;
+    pagesContainer.appendChild(page);
+  }
+
+  // Sample pages
+  for (let i = 0; i < 5; i++) {
+    createPage();
+  }
+
+  // --------------------
+  // Export JSON
+  document.getElementById('export-json').addEventListener('click', () => {
+    const pages = [];
+    document.querySelectorAll('.journal-page').forEach(p => {
+      const date = p.querySelector('input[type="date"]').value;
+      const title = p.querySelectorAll('input')[1].value;
+      const content = p.querySelector('textarea').value;
+      pages.push({date,title,content});
+    });
+    const blob = new Blob([JSON.stringify(pages, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'journal.json';
+    a.click();
+  });
+
+  // --------------------
+  // Export PDF using html2pdf library
+  document.getElementById('export-pdf').addEventListener('click', () => {
+    import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')
+      .then(() => {
+        html2pdf().from(pagesContainer).save('journal.pdf');
+      });
+  });
+
+  // --------------------
+  // Front cover button
+  document.getElementById('go-front').addEventListener('click', () => {
+    drawer.style.right = '-400px';
+    drawerOpen = false;
+  });
+</script>
+</body>
+</html>
