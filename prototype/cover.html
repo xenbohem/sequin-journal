@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flipping Sequined Journal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet"> <!-- Digital clock font -->
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4B0082, #8A2BE2);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sequined cover */
+        .cover {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.5s;
+            overflow: hidden; /* Contain sequins */
+        }
+        
+        .cover-text {
+            position: absolute;
+            font-size: 24px;
+            color: gold;
+            z-index: 10;
+            text-align: center;
+            pointer-events: none; /* Allow hover on sequins */
+        }
+        
+        /* Sequins container */
+        .sequins {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(15, 1fr); /* 15 columns */
+            grid-template-rows: repeat(20, 1fr); /* 20 rows for overlap */
+            gap: 5px; /* Slight gap for realism */
+        }
+        
+        /* Individual sequin */
+        .sequin {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%; /* Round and flat */
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+            filter: blur(0.5px) opacity(0.8); /* Glassy Gaussian blur transparency */
+            box-shadow: 0 0 5px rgba(255,255,255,0.5); /* Individual glow */
+            z-index: 1;
+        }
+        
+        /* Front side (purple) */
+        .sequin::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #8A2BE2, #4B0082); /* Purple gradient */
+            backface-visibility: hidden;
+        }
+        
+        /* Back side (indigo) */
+        .sequin::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4B0082, #00BFFF); /* Indigo gradient */
+            backface-visibility: hidden;
+            transform: rotateY(180deg);
+        }
+        
+        /* Hover flip effect */
+        .cover:hover .sequin {
+            transform: rotateY(180deg); /* Flip to show back */
+        }
+        
+        /* Book container */
+        .book {
+            display: none;
+            perspective: 1000px;
+            width: 800px;
+            height: 600px;
+        }
+        
+        .pages {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+        
+        .page {
+            position: absolute;
+            width: 400px;
+            height: 600px;
+            background: #f5f5dc; /* Parchment */
+            color: #333;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            backface-visibility: hidden;
+            transition: transform 2s ease-in-out;
+        }
+        
+        .page.left {
+            left: 0;
+            transform-origin: right center;
+        }
+        
+        .page.right {
+            right: 0;
+            transform-origin: left center;
+        }
+        
+        .page.flipping {
+            transform: rotateY(-180deg);
+        }
+        
+        /* Date area with Gaussian blur */
+        .date-area {
+            background: rgba(230, 230, 250, 0.7); /* Lavender tint */
+            backdrop-filter: blur(10px); /* Gaussian blur */
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-family: 'Orbitron', monospace; /* Digital clock font */
+            font-size: 18px;
+            color: #333;
+            text-align: center;
+        }
+        
+        /* Textarea with black text and lavender blur tint */
+        .content-area {
+            flex: 1;
+            position: relative;
+            background: rgba(230, 230, 250, 0.5); /* Lavender tint */
+            backdrop-filter: blur(8px); /* Gaussian blur */
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .page textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 16px;
+            color: black; /* Black text */
+            resize: none;
+        }
+        
+        .page button {
+            margin: 10px 5px;
+            padding: 10px;
+            background: #8A2BE2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .page button:hover {
+            background: #4B0082;
+        }
+        
+        .nav {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .nav button {
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cover" id="cover">
+        <div class="sequins" id="sequins"></div>
+        <div class="cover-text">My Daily Journal<br>Click to Open</div>
+    </div>
+    
+    <div class="book" id="book">
+        <div class="pages" id="pages">
+            <!-- Pages will be dynamically added here -->
+        </div>
+        <div class="nav">
+            <button id="prev">Prev</button>
+            <button id="next">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const cover = document.getElementById('cover');
+        const sequinsContainer = document.getElementById('sequins');
+        const book = document.getElementById('book');
+        const pagesContainer = document.getElementById('pages');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        
+        const maxPages = 100;
+        let currentPage = 0;
+        let pagesData = JSON.parse(localStorage.getItem('journalPages')) || [];
+        let lastMouseX = 0; // Track mouse X for direction
+        
+        // Ensure we have up to 100 pages initialized
+        while (pagesData.length < maxPages) {
+            pagesData.push('');
+        }
+        
+        // Generate sequins in a grid with slight overlap
+        function generateSequins() {
+            for (let row = 0; row < 20; row++) {
+                for (let col = 0; col < 15; col++) {
+                    const sequin = document.createElement('div');
+                    sequin.className = 'sequin';
+                    // Slight random offset for overlap
+                    sequin.style.left = `${col * 25 + Math.random() * 5 - 2.5}px`;
+                    sequin.style.top = `${row * 25 + Math.random() * 5 - 2.5}px`;
+                    sequinsContainer.appendChild(sequin);
+                }
+            }
+        }
+        generateSequins();
+        
+        // Handle hover flip based on mouse direction
+        cover.addEventListener('mousemove', (e) => {
+            const currentMouseX = e.clientX;
+            const direction = currentMouseX > lastMouseX ? 'right' : 'left';
+            lastMouseX = currentMouseX;
+            
+            const sequins = document.querySelectorAll('.sequin');
+            sequins.forEach(sequin => {
+                if (direction === 'right') {
+                    sequin.style.transform = 'rotateY(180deg)'; // Show indigo
+                } else {
+                    sequin.style.transform = 'rotateY(0deg)'; // Show purple
+                }
+            });
+        });
+        
+        // Create page elements
+        function createPages() {
+            pagesContainer.innerHTML = '';
+            for (let i = 0; i < maxPages; i += 2) {
+                const leftPage = document.createElement('div');
+                leftPage.className = 'page left';
+                leftPage.innerHTML = `
+                    <div class="date-area">Day ${i + 1}: ${new Date(Date.now() - (maxPages - i - 1) * 24 * 60 * 60 * 1000).toDateString()}</div>
+                    <div class="content-area">
+                        <textarea id="entry-${i}" placeholder="Write your entry for Day ${i + 1}...">${pagesData[i]}</textarea>
+                    </div>
+                    <button onclick="saveEntry(${i})">Save</button>
+                `;
+                
+                const rightPage = document.createElement('div');
+                rightPage.className = 'page right';
+                if (i + 1 < maxPages) {
+                    rightPage.innerHTML = `
+                        <div class="date-area">Day ${i + 2}: ${new Date(Date.now() - (maxPages - i - 2) * 24 * 60 * 60 * 1000).toDateString()}</div>
+                        <div class="content-area">
+                            <textarea id="entry-${i + 1}" placeholder="Write your entry for Day ${i + 2}...">${pagesData[i + 1]}</textarea>
+                        </div>
+                        <button onclick="saveEntry(${i + 1})">Save</button>
+                    `;
+                }
+                
+                pagesContainer.appendChild(leftPage);
+                pagesContainer.appendChild(rightPage);
+            }
+            updatePageVisibility();
+        }
+        
+        // Update which pages are visible
+        function updatePageVisibility() {
+            const allPages = document.querySelectorAll('.page');
+            allPages.forEach((page, index) => {
+                if (Math.floor(index / 2) === currentPage) {
+                    page.style.display = 'flex';
+                } else {
+                    page.style.display = 'none';
+                }
+            });
+        }
+        
+        // Flip animation
+        function flipPage(direction) {
+            const currentLeft = document.querySelectorAll('.page.left')[currentPage];
+            const currentRight = document.querySelectorAll('.page.right')[currentPage];
+            
+            if (direction === 'next' && currentPage < Math.floor(maxPages / 2) - 1) {
+                currentRight.classList.add('flipping');
+                setTimeout(() => {
+                    currentPage++;
+                    updatePageVisibility();
+                    currentRight.classList.remove('flipping');
+                }, 2000);
+            } else if (direction === 'prev' && currentPage > 0) {
+                currentPage--;
+                updatePageVisibility();
+                currentLeft.classList.add('flipping');
+                setTimeout(() => {
+                    currentLeft.classList.remove('flipping');
+                }, 2000);
+            }
+        }
+        
+        // Save entry
+        window.saveEntry = function(index) {
+            const textarea = document.getElementById(`entry-${index}`);
+            pagesData[index] = textarea.value;
+            localStorage.setItem('journalPages', JSON.stringify(pagesData));
+        };
+        
+        // Event listeners
+        cover.addEventListener('click', () => {
+            cover.style.transform = 'rotateY(180deg)';
+            setTimeout(() => {
+                cover.style.display = 'none';
+                book.style.display = 'block';
+                createPages();
+            }, 500);
+        });
+        
+        nextBtn.addEventListener('click', () => flipPage('next'));
+        prevBtn.addEventListener('click', () => flipPage('prev'));
+        
+        // Initial load
+        createPages();
+    </script>
+</body>
+</html>
