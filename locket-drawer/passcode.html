@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Fairy Journal — Full Version (Passcode, Backup, PDF)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<!-- jsPDF for PDF export -->
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --card-w: 380px;
+    --card-h: 560px;
+    --panel-cols: 10;
+    --panel-rows: 14;
+    --total-pages: 500;
+    --drawer-w: 360px;
+    --brass: #b7852f;
+    --paper-edge: rgba(240,230,220,0.78);
+  }
+  html,body{height:100%; margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;}
+  body{ background: radial-gradient(circle at 10% 10%, #12061a 0%, #0b0410 40%), #08030a; display:flex;
+    align-items:center; justify-content:center; padding:36px; box-sizing:border-box; overflow:hidden; color:#222; }
+
+  .stage{ display:flex; gap:20px; align-items:center; }
+
+  /* CARD */
+  .fantasy-card{ width:var(--card-w); height:var(--card-h); border-radius:28px; padding:20px; position:relative;
+    background: linear-gradient(145deg,#3b1761,#1b0f33); box-shadow:0 20px 60px rgba(140,80,255,0.22);
+    display:grid; grid-template-rows:auto 1fr auto; z-index:20; }
+  .fantasy-card::before,.fantasy-card::after{ content:""; position:absolute; width:100%; height:48px; left:0;
+    background: radial-gradient(circle at 10% 50%, rgba(255,255,255,0.18), transparent 55%), radial-gradient(circle at 90% 50%, rgba(180,140,255,0.12), transparent 55%); }
+  .fantasy-card::before{ top:0; border-top-left-radius:28px; border-top-right-radius:28px;}
+  .fantasy-card::after{ bottom:0; border-bottom-left-radius:28px; border-bottom-right-radius:28px;}
+  .card-title{ text-align:center; font-size:1.5rem; color:#f6e9ff; text-shadow:0 0 8px rgba(200,160,255,0.6); pointer-events:none; padding-bottom:6px; }
+
+  /* SEQUIN PANEL */
+  .panel { border-radius:18px; display:grid; grid-template-columns: repeat(var(--panel-cols),1fr);
+    grid-template-rows: repeat(var(--panel-rows),1fr); gap:6px; padding:14px;
+    background: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.18), transparent 40%), radial-gradient(circle at 80% 30%, rgba(255,255,180,0.12), transparent 40%), linear-gradient(135deg,#4d2a7f,#1b0f33); background-blend-mode:screen; align-self:center; box-shadow: inset 0 2px 12px rgba(0,0,0,0.35); }
+  .sequin{ width:100%; height:100%; border-radius:50%; position:relative; cursor:pointer; transition:transform .22s ease, background .22s ease;
+    background: radial-gradient(circle at 30% 30%, #c488ff, #8946d8 60%, #3b165d 100%); }
+  .sequin.flipped{ background: radial-gradient(circle at 70% 70%, #5a61ff,#3237a0 60%,#141852 100%); }
+  .sequin::after{ content:""; position:absolute; inset:0; border-radius:50%;
+    background: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.85), transparent 40%), radial-gradient(circle at 65% 70%, rgba(255,255,255,0.36), transparent 60%);
+    mix-blend-mode:screen; opacity:.7; pointer-events:none; }
+
+  /* sparkles */
+  .sparkle{ position:fixed; width:6px; height:6px; border-radius:50%; background: radial-gradient(circle, rgba(255,255,255,1) 30%, rgba(255,255,255,0.05) 70%);
+    pointer-events:none; transform:translate(-50%,-50%); z-index:1000; filter:drop-shadow(0 0 6px rgba(255,255,255,.9)); animation: sparkle-fade 1.4s ease-out forwards; }
+  @keyframes sparkle-fade{ 0%{ opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{ opacity:0; transform:translate(-50%,-120%) scale(1.6);} }
+
+  /* drawer & lock */
+  .drawer-wrap{ width:var(--drawer-w); height:var(--card-h); position:relative; display:flex; align-items:center; justify-content:flex-start; pointer-events:none; }
+  .lock-hinge{ position:absolute; right: calc(var(--drawer-w) - 20px); top: calc(50% - 22px); width:40px; height:44px; transform-origin:left center; z-index:40; pointer-events:auto; }
+  .lock-button{ position:relative; left:6px; width:34px; height:34px; cursor:pointer; display:flex; align-items:center; justify-content:center; transform-origin:center; transition:transform .28s cubic-bezier(.2,.9,.1,1); }
+  .lock-chain{ position:absolute; left:10px; top:-22px; width:2px; height:18px; background: linear-gradient(#cfa95b,#8a5f23); transform-origin:top center; border-radius:1px; }
+  .lock-body{ width:24px; height:22px; border-radius:5px; background:linear-gradient(#d3a95a,#b07d2a); border:1px solid rgba(0,0,0,0.18); box-shadow: inset 0 -3px 6px rgba(0,0,0,0.15), 0 3px 8px rgba(0,0,0,0.25); position:relative; }
+  .lock-body::before{ content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-30%); width:8px; height:10px; background:linear-gradient(#2b1808,#1b0f07); border-radius:2px; box-shadow: inset 0 1px rgba(255,255,255,0.05); }
+  .lock-shackle{ position:absolute; left:50%; top:-10px; transform:translateX(-50%); width:18px; height:14px; border:3px solid var(--brass); border-bottom:none; border-radius:14px 14px 0 0; background:transparent; }
+  .lock-open .lock-button{ transform: rotate(22deg) translate(4px,-2px); }
+  .lock-open .lock-chain{ transform: rotate(20deg) translateY(6px); }
+
+  .drawer{ position:absolute; right:0; top:0; width:var(--drawer-w); height:100%; background: linear-gradient(180deg,#fff,#fff); transform: translateX(calc(100%)); transition: transform .42s cubic-bezier(.22,.98,.35,1), box-shadow .3s, opacity .28s; border-radius:12px; box-shadow:0 20px 60px rgba(10,6,12,0.45); pointer-events:none; z-index:30; opacity:0; }
+  .drawer.open{ transform: translateX(0); box-shadow:0 25px 90px rgba(10,6,12,0.6); opacity:1; pointer-events:auto; }
+
+  .drawer-inner{ height:100%; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px; background: linear-gradient(180deg, rgba(250,250,250,0.98), rgba(250,248,244,0.98)); }
+
+  .drawer-top{ display:flex; gap:8px; align-items:center; justify-content:space-between; }
+  .page-stack{ width:68px; height:100%; position:relative; border-radius:8px; background: linear-gradient(180deg,#fcfbf8,#f6f2ee); box-shadow: inset 0 0 0 1px rgba(200,190,180,0.15), 0 6px 18px rgba(0,0,0,0.15); overflow:hidden; flex:0 0 68px; }
+  .page-stack::before{ content:""; position:absolute; left:8px; top:8px; right:8px; bottom:8px; background: repeating-linear-gradient(180deg, rgba(230,220,210,0.6) 0 1px, transparent 1px 6px); opacity:0.6; filter: blur(0.2px); }
+
+  .page-area{ flex:1; padding:12px; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+
+  .page{ background: linear-gradient(180deg,#fff,#fff); border-radius:10px; padding:16px; box-shadow: 0 6px 22px rgba(20,10,20,0.06); min-height:220px; max-width:540px; width:100%; border:1px solid rgba(200,190,180,0.18); box-sizing:border-box; position:relative; }
+  .page.vintage{ box-shadow: 0 8px 22px rgba(30,14,50,0.06), inset 0 0 0 1px rgba(220,210,195,0.18); }
+  .page.vintage::after{ content:""; position:absolute; left:6px; right:6px; bottom:8px; height:12px; background: linear-gradient(180deg, rgba(250,246,240,0.95), rgba(245,240,230,0.4)); border-radius:6px; pointer-events:none; opacity:.8; }
+
+  .date-row{ display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .page input[type="date"], .page input[type="text"]{ width:220px; padding:6px 8px; border-radius:6px; border:1px solid rgba(120,110,130,0.12); background: linear-gradient(180deg,#fff,#fdfbf9); font-size:14px; }
+  .page input.title{ width:100%; font-weight:600; padding:8px; }
+
+  .page textarea{ width:100%; min-height:180px; resize:vertical; padding:10px; border-radius:8px; border:1px solid rgba(140,120,140,0.08); font-size:14px; line-height:1.45; background: linear-gradient(180deg,#fff,#fff); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }
+
+  .page-controls{ display:flex; gap:8px; align-items:center; justify-content:flex-end; padding-top:6px; }
+  .btn{ background:linear-gradient(180deg,#fff,#f6f3ee); border:1px solid rgba(180,170,160,0.2); padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .btn.secondary{ background:transparent; border:1px solid rgba(255,255,255,0.04); color:#fff; }
+
+  .page-footer{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; color:#5c5260; padding-top:6px; }
+
+  .date-index{ display:flex; flex-direction:column; gap:6px; max-height:120px; overflow:auto; padding:6px; border-radius:8px; background:linear-gradient(180deg, rgba(250,250,255,0.6), rgba(250,250,250,0.4)); }
+  .date-item{ padding:6px 8px; border-radius:6px; background:transparent; cursor:pointer; font-size:13px; color:#2b2140; border:1px solid rgba(0,0,0,0.04); }
+  .date-item:hover{ background: rgba(120,90,200,0.08); }
+
+  /* password modal & create modal */
+  .pw-overlay{ position:fixed; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; z-index:100000; background: rgba(4,4,6,0.45); opacity:0; pointer-events:none; transition:opacity .18s; }
+  .pw-overlay.open{ opacity:1; pointer-events:auto; }
+  .pw-box{ background:linear-gradient(180deg,#0f0620,#210a37); padding:18px; border-radius:12px; box-shadow:0 12px 40px rgba(0,0,0,0.6); color:#fff; width:360px; text-align:center; border:1px solid rgba(255,255,255,0.04); }
+  .pw-box h3{ margin:0 0 8px 0; font-weight:600; }
+  .pw-input{ margin-top:8px; display:flex; gap:8px; justify-content:center; }
+  .pw-input input{ width:220px; padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color:#fff; text-transform:none; letter-spacing:2px; font-size:16px; text-align:center; }
+  .pw-error{ margin-top:8px; color:#ffb4c4; height:18px; font-size:13px; opacity:0; transition:opacity .18s; }
+  .pw-error.show{ opacity:1; }
+  .pw-box.shake{ animation: shakeX .44s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shakeX { 0%{ transform: translateX(0);} 20%{ transform: translateX(-8px);} 40%{ transform: translateX(8px);} 60%{ transform: translateX(-6px);} 80%{ transform: translateX(6px);} 100%{ transform: translateX(0);} }
+
+  /* import area hidden file input */
+  .hidden-file{ display:none; }
+
+  /* bottom-left book icon */
+  .book-home{ position:fixed; left:18px; bottom:18px; width:56px; height:56px; background: linear-gradient(180deg,#f2e9ff,#e7dcff); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(80,48,140,0.28); cursor:pointer; z-index:1000; }
+  .book-home .icon{ width:34px; height:34px; background: linear-gradient(180deg,#d9b7ff,#b88bff); border-radius:6px; box-shadow: inset 0 1px rgba(255,255,255,0.4); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; }
+  .book-home:hover{ transform: translateY(-4px); transition:transform .18s; }
+
+  /* small settings area inside drawer top */
+  .controls-row{ display:flex; gap:8px; align-items:center; }
+  .muted{ font-size:13px; color:#6b5a66; }
+  /* responsive */
+  @media (max-width:920px){ :root{ --drawer-w: 300px; } .stage{ gap:12px; } }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="fantasy-card" id="card">
+      <div class="card-title">✨ My Fairy Journal ✨</div>
+      <div class="panel" id="panel"></div>
+    </div>
+
+    <div class="drawer-wrap">
+      <div class="lock-hinge" id="lockHinge" role="button" aria-label="Open journal drawer" title="Click lock">
+        <div class="lock-chain"></div>
+        <div class="lock-button" id="lockBtn">
+          <div class="lock-body" aria-hidden="true"></div>
+          <div class="lock-shackle" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="drawer" id="drawer" aria-hidden="true">
+        <div class="drawer-inner">
+          <div class="drawer-top">
+            <div style="display:flex;flex-direction:column">
+              <div style="font-size:13px;color:#6b5a66">Date Index</div>
+              <div id="dateIndex" class="date-index" aria-live="polite"></div>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="font-size:13px;color:#5c5260">Pages <strong id="pageCountSpan">0/0</strong></div>
+
+              <div class="controls-row">
+                <button class="btn" id="exportJsonBtn" title="Export JSON">Export JSON</button>
+                <button class="btn" id="importJsonBtn" title="Import JSON">Import JSON</button>
+                <button class="btn" id="exportPdfBtn" title="Export PDF">Export PDF</button>
+                <button class="btn" id="closeDrawerBtn" title="Close drawer">Close</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:stretch; flex:1;">
+            <div class="page-stack" aria-hidden="true"></div>
+            <div class="page-area" id="pageArea"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- password/create modal -->
+  <div class="pw-overlay" id="pwOverlay" aria-hidden="true">
+    <div class="pw-box" id="pwBox" role="dialog" aria-modal="true" aria-label="Passcode dialog">
+      <h3 id="pwTitle">Unlock Journal Drawer</h3>
+      <div id="pwDesc" style="font-size:13px;color:#cfc0f0">Enter your 4-letter passcode</div>
+
+      <div style="height:8px"></div>
+
+      <!-- dynamic content inserted here (either create or enter UI) -->
+      <div id="pwContent"></div>
+
+      <div class="pw-error" id="pwError">Incorrect passcode</div>
+    </div>
+  </div>
+
+  <!-- hidden import file input -->
+  <input type="file" accept="application/json" id="importFile" class="hidden-file" />
+
+  <!-- book home icon -->
+  <div class="book-home" id="bookHome" title="Return to cover">
+    <div class="icon">📖</div>
+  </div>
+
+<script>
+/* ---------- Basic drawing + sparkles (unchanged) ---------- */
+const panel = document.getElementById('panel');
+const cols = 10, rows = 14;
+const totalSequins = cols * rows;
+for(let i=0;i<totalSequins;i++){
+  const s = document.createElement('div');
+  s.className = 'sequin';
+  panel.appendChild(s);
+}
+let isDragging = false;
+let lastX = null;
+function updateSequin(el, dx){
+  if(dx === 0) el.classList.toggle('flipped');
+  else if(dx > 0) el.classList.add('flipped');
+  else el.classList.remove('flipped');
+}
+function createSparkle(x,y){
+  const sp = document.createElement('div');
+  sp.className = 'sparkle';
+  sp.style.left = x + 'px';
+  sp.style.top = y + 'px';
+  document.body.appendChild(sp);
+  setTimeout(()=> sp.remove(), 1500);
+}
+let sparkleCooldown = 0;
+panel.addEventListener('pointerdown', e => {
+  isDragging = true; lastX = e.clientX;
+  Array.from(panel.children).forEach(s=>{
+    const r = s.getBoundingClientRect();
+    if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+      updateSequin(s, 0);
+    }
+  });
+});
+panel.addEventListener('pointerup', ()=> { isDragging=false; lastX=null; });
+panel.addEventListener('pointerleave', ()=> { isDragging=false; lastX=null; });
+panel.addEventListener('pointermove', e => {
+  if(!isDragging) return;
+  const dx = e.clientX - lastX; lastX = e.clientX;
+  Array.from(panel.children).forEach(s=>{
+    const r = s.getBoundingClientRect();
+    if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+      updateSequin(s, dx);
+    }
+  });
+  const now = performance.now();
+  if(now - sparkleCooldown > 40){
+    createSparkle(e.clientX, e.clientY); sparkleCooldown = now;
+  }
+});
+
+/* ---------- Drawer, Passcode, Pages, Backup/Import, PDF ---------- */
+const lockBtn = document.getElementById('lockBtn');
+const lockHinge = document.getElementById('lockHinge');
+const drawer = document.getElementById('drawer');
+const pageArea = document.getElementById('pageArea');
+const pageCountSpan = document.getElementById('pageCountSpan');
+const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+const dateIndex = document.getElementById('dateIndex');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const exportPdfBtn = document.getElementById('exportPdfBtn');
+const importFile = document.getElementById('importFile');
+const bookHome = document.getElementById('bookHome');
+
+const PAGES = Number(getComputedStyle(document.documentElement).getPropertyValue('--total-pages')) || 500;
+pageCountSpan.textContent = `1/${PAGES}`;
+
+/* storage */
+const STORAGE_KEY = 'fairy_journal_pages_v2';
+const PASSKEY = 'fairy_journal_pass_v2';
+let pages = new Array(PAGES).fill(null);
+try{ const saved = localStorage.getItem(STORAGE_KEY); if(saved){ const parsed = JSON.parse(saved); if(Array.isArray(parsed) && parsed.length === PAGES) pages = parsed; } }catch(e){ console.warn('restore failed', e); }
+
+/* state */
+let drawerOpen = false;
+let currentPageIndex = 0;
+
+/* Password modal elements */
+const pwOverlay = document.getElementById('pwOverlay');
+const pwBox = document.getElementById('pwBox');
+const pwContent = document.getElementById('pwContent');
+const pwTitle = document.getElementById('pwTitle');
+const pwDesc = document.getElementById('pwDesc');
+const pwError = document.getElementById('pwError');
+
+/* helpers to open/hide password modal */
+function showModalHTML(html){
+  pwContent.innerHTML = html;
+  pwError.classList.remove('show');
+  pwBox.classList.remove('shake');
+  pwOverlay.classList.add('open');
+  pwOverlay.setAttribute('aria-hidden','false');
+  // attach event listeners for any buttons inside content (delegated)
+}
+function hideModal(){ pwOverlay.classList.remove('open'); pwOverlay.setAttribute('aria-hidden','true'); }
+
+/* check if pass exists */
+function hasPasscode(){ return !!localStorage.getItem(PASSKEY); }
+function getPasscode(){ return localStorage.getItem(PASSKEY); }
+function setPasscode(v){ localStorage.setItem(PASSKEY, v); }
+
+/* create-passcode flow (first time) */
+function showCreatePasscode(){
+  pwTitle.textContent = 'Create a 4-letter passcode';
+  pwDesc.textContent = 'Choose a short 4-letter passcode to protect your drawer (saved locally).';
+  showModalHTML(`
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      <input id="newPass" placeholder="e.g. myst" maxlength="8" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#fff;text-align:center;font-size:16px" />
+      <input id="confirmPass" placeholder="confirm passcode" maxlength="8" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#fff;text-align:center;font-size:16px" />
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:6px;">
+        <button id="createOk" class="btn">Create</button>
+        <button id="createCancel" class="btn secondary">Cancel</button>
+      </div>
+      <div style="font-size:12px;color:#d8c9f8;margin-top:6px">Tip: keep it memorable. You can change it later.</div>
+    </div>
+  `);
+  setTimeout(()=> document.getElementById('newPass').focus(),80);
+  // handlers:
+  pwContent.querySelector('#createCancel').addEventListener('click', ()=> hideModal());
+  pwContent.querySelector('#createOk').addEventListener('click', ()=>{
+    const a = String((pwContent.querySelector('#newPass')||{}).value||'').trim();
+    const b = String((pwContent.querySelector('#confirmPass')||{}).value||'').trim();
+    if(!a || a.length < 1 || a.length > 16){ showPassError('Enter a short passcode'); return; }
+    if(a !== b){ showPassError('Passcodes do not match'); return; }
+    setPasscode(a);
+    hideModal();
+    setTimeout(()=> openDrawerAfterUnlock(),160);
+  });
+}
+
+/* show enter passcode modal */
+function showEnterPasscode(){
+  pwTitle.textContent = 'Unlock Journal Drawer';
+  pwDesc.textContent = 'Enter your passcode';
+  showModalHTML(`
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+      <input id="enterPass" placeholder="----" maxlength="16" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#fff;text-align:center;font-size:16px" />
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:6px;">
+        <button id="enterOk" class="btn">Unlock</button>
+        <button id="enterCancel" class="btn secondary">Cancel</button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:6px;">
+        <button id="forgotBtn" class="btn secondary">Reset Passcode</button>
+      </div>
+    </div>
+  `);
+  setTimeout(()=> document.getElementById('enterPass').focus(),80);
+  pwContent.querySelector('#enterCancel').addEventListener('click', ()=> hideModal());
+  pwContent.querySelector('#enterOk').addEventListener('click', ()=> {
+    const v = String((pwContent.querySelector('#enterPass')||{}).value||'').trim();
+    if(!v) { showPassError('Enter a passcode'); return; }
+    if(v === getPasscode()){
+      hideModal(); setTimeout(()=> openDrawerAfterUnlock(), 160);
+    } else { showPassError('Incorrect passcode'); }
+  });
+  // forgot handler: only allow reset if journal empty (for safety)
+  pwContent.querySelector('#forgotBtn').addEventListener('click', ()=> {
+    const nonEmpty = pages.some(p => p && (p.title || p.body));
+    if(nonEmpty){
+      alert('Reset disabled because journal contains entries. To reset, export your data then clear it.');
+      return;
+    }
+    if(confirm('Journal is empty. Reset saved passcode?')){
+      localStorage.removeItem(PASSKEY);
+      hideModal();
+      setTimeout(()=> showCreatePasscode(),160);
+    }
+  });
+}
+
+/* small helper to show pass error */
+function showPassError(msg){
+  pwError.textContent = msg; pwError.classList.add('show'); pwBox.classList.add('shake');
+  setTimeout(()=> pwBox.classList.remove('shake'),480);
+}
+
+/* open drawer after correct unlock */
+function openDrawerAfterUnlock(){
+  drawer.classList.add('open'); lockHinge.classList.add('lock-open'); drawer.setAttribute('aria-hidden','false'); renderPage(currentPageIndex);
+}
+
+/* lock click behavior */
+lockBtn.addEventListener('click', (ev)=>{
+  ev.stopPropagation();
+  // if no passcode present -> create
+  if(!hasPasscode()) showCreatePasscode();
+  else showEnterPasscode();
+});
+
+/* close button */
+closeDrawerBtn.addEventListener('click', ()=> { drawer.classList.remove('open'); lockHinge.classList.remove('lock-open'); hideModal(); });
+
+/* book home always visible */
+bookHome.addEventListener('click', ()=> {
+  drawer.classList.remove('open'); lockHinge.classList.remove('lock-open');
+  // tiny bounce feedback
+  bookHome.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-6px)' }, { transform: 'translateY(0)' }], { duration: 340, easing: 'ease-out' });
+});
+
+/* pages rendering (unchanged logic with date index) */
+const pageCountSpan = document.getElementById('pageCountSpan');
+function renderPage(index){
+  currentPageIndex = Math.max(0, Math.min(PAGES-1, index));
+  pageCountSpan.textContent = `${currentPageIndex+1}/${PAGES}`;
+  if(!pages[currentPageIndex]) pages[currentPageIndex] = { date: new Date().toISOString().slice(0,10), title:'', body:'' };
+  pageArea.innerHTML = '';
+  const pageWrap = document.createElement('div'); pageWrap.className = 'page vintage';
+  const dateRow = document.createElement('div'); dateRow.className = 'date-row';
+  const dateLabel = document.createElement('label'); dateLabel.textContent = 'Date';
+  const dateInput = document.createElement('input'); dateInput.type = 'date';
+  dateInput.value = pages[currentPageIndex].date || new Date().toISOString().slice(0,10);
+  dateInput.addEventListener('change', ()=> { pages[currentPageIndex].date = dateInput.value; savePages(); refreshDateIndex(); });
+  dateRow.appendChild(dateLabel); dateRow.appendChild(dateInput);
+
+  const prevByDateBtn = document.createElement('button'); prevByDateBtn.className = 'btn secondary'; prevByDateBtn.style.marginLeft='8px'; prevByDateBtn.textContent = 'Find by Date';
+  prevByDateBtn.addEventListener('click', ()=> {
+    const d = prompt('Enter date (YYYY-MM-DD):', dateInput.value || '');
+    if(!d) return;
+    const found = pages.findIndex(p => p && p.date === d);
+    if(found >= 0) renderPage(found);
+    else alert('No entry found for that date.');
+  });
+  dateRow.appendChild(prevByDateBtn);
+
+  const titleInput = document.createElement('input'); titleInput.type='text'; titleInput.placeholder='Entry title'; titleInput.className='title';
+  titleInput.value = pages[currentPageIndex].title || '';
+  titleInput.addEventListener('input', ()=> { pages[currentPageIndex].title = titleInput.value; savePages(); refreshDateIndex(); });
+
+  const ta = document.createElement('textarea'); ta.placeholder='Write your thoughts...'; ta.value = pages[currentPageIndex].body || '';
+  ta.addEventListener('input', ()=> { pages[currentPageIndex].body = ta.value; savePages(); });
+
+  const controls = document.createElement('div'); controls.className = 'page-controls';
+  const prevBtn = document.createElement('button'); prevBtn.className='btn'; prevBtn.textContent='← Prev'; prevBtn.addEventListener('click', ()=> renderPage(currentPageIndex-1));
+  const nextBtn = document.createElement('button'); nextBtn.className='btn'; nextBtn.textContent='Next →'; nextBtn.addEventListener('click', ()=> renderPage(currentPageIndex+1));
+  const jumpInput = document.createElement('input'); jumpInput.type='number'; jumpInput.min=1; jumpInput.max=PAGES; jumpInput.value=currentPageIndex+1; jumpInput.style.width='70px';
+  jumpInput.addEventListener('change', ()=> { const v = Math.max(1, Math.min(PAGES, Number(jumpInput.value) || 1)); renderPage(v-1); });
+  const saveBtn = document.createElement('button'); saveBtn.className='btn'; saveBtn.textContent='Save'; saveBtn.addEventListener('click', ()=> { savePages(); saveFeedback(); });
+
+  controls.appendChild(prevBtn); controls.appendChild(nextBtn); controls.appendChild(jumpInput); controls.appendChild(saveBtn);
+
+  const footer = document.createElement('div'); footer.className='page-footer';
+  footer.innerHTML = `<div>Page ${currentPageIndex+1} of ${PAGES}</div><div style="font-size:13px;color:#6b5a66">Vintage • Slight cream edge</div>`;
+
+  pageWrap.appendChild(dateRow); pageWrap.appendChild(titleInput); pageWrap.appendChild(ta);
+  pageArea.appendChild(pageWrap); pageArea.appendChild(controls); pageArea.appendChild(footer);
+  setTimeout(()=> ta.focus(), 60); refreshDateIndex();
+}
+
+/* save + load */
+function savePages(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(pages)); }catch(e){ console.warn('save failed', e); } }
+function saveFeedback(){ const stack = document.querySelector('.page-stack'); stack.style.boxShadow = 'inset 0 0 0 2px rgba(180,130,255,0.18)'; setTimeout(()=> stack.style.boxShadow = 'inset 0 0 0 1px rgba(200,190,180,0.15), 0 6px 18px rgba(0,0,0,0.15)', 400); }
+
+function getSavedDates(){ const map = {}; pages.forEach((p,i)=> { if(p && p.date) { if(!map[p.date]) map[p.date]=i; } }); return Object.keys(map).sort((a,b)=> b.localeCompare(a)).map(d=> ({ date: d, index: map[d] }) ); }
+function refreshDateIndex(){ const list = getSavedDates(); dateIndex.innerHTML=''; if(list.length===0) { dateIndex.innerHTML = '<div style="font-size:13px;color:#6b5a66">No saved dates yet</div>'; return; } list.forEach(item=>{ const el = document.createElement('div'); el.className='date-item'; el.textContent=item.date; el.addEventListener('click', ()=> renderPage(item.index)); dateIndex.appendChild(el); }); }
+
+/* initialize */
+document.addEventListener('DOMContentLoaded', ()=> {
+  if(pages.length !== PAGES){
+    const newPages = new Array(PAGES).fill(null);
+    for(let i=0;i<Math.min(pages.length,PAGES);i++) newPages[i] = pages[i];
+    pages = newPages;
+  }
+  pageCountSpan.textContent = `1/${PAGES}`;
+});
+
+/* close if clicking outside when open */
+document.addEventListener('click', (e)=>{ if(!drawer.classList.contains('open')) return; const within = drawer.contains(e.target) || lockHinge.contains(e.target); if(!within) { drawer.classList.remove('open'); lockHinge.classList.remove('lock-open'); } });
+document.addEventListener('keydown', (e)=>{ if(!drawer.classList.contains('open')) return; if(e.key==='ArrowRight') renderPage(currentPageIndex+1); if(e.key==='ArrowLeft') renderPage(currentPageIndex-1); if(e.key==='Escape') { drawer.classList.remove('open'); lockHinge.classList.remove('lock-open'); } });
+
+/* ---------- Export JSON (with option to include passcode) ---------- */
+exportJsonBtn.addEventListener('click', async ()=>{
+  // ask whether to include passcode
+  const include = confirm('Include your passcode in the backup file? (Choose OK to include, Cancel to exclude)');
+  const payload = { meta: { exportedAt: new Date().toISOString(), pages: PAGES }, entries: pages.slice() };
+  if(include) payload.passcode = getPasscode() || null;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `fairy-journal-backup-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* ---------- Import JSON (with safety) ---------- */
+importJsonBtn.addEventListener('click', ()=> importFile.click());
+importFile.addEventListener('change', async (ev)=>{
+  const f = importFile.files && importFile.files[0];
+  if(!f) return;
+  try{
+    const txt = await f.text();
+    const parsed = JSON.parse(txt);
+    // basic validation
+    if(!parsed.entries || !Array.isArray(parsed.entries)) { alert('Invalid backup file.'); return; }
+    if(parsed.entries.length !== PAGES){ if(!confirm(`Backup has ${parsed.entries.length} pages (expected ${PAGES}). Import will adapt. Continue?`)) return; }
+    if(!confirm('Importing will replace in-memory journal pages. Continue?')) return;
+    // import
+    const newPages = new Array(PAGES).fill(null);
+    for(let i=0;i<Math.min(parsed.entries.length,PAGES);i++) newPages[i] = parsed.entries[i];
+    pages = newPages;
+    savePages();
+    if(parsed.passcode){
+      if(confirm('Backup contains a saved passcode. Do you want to restore it?')){
+        setPasscode(parsed.passcode);
+        alert('Passcode restored from backup.');
+      }
+    }
+    alert('Import complete.');
+    refreshDateIndex();
+    renderPage(0);
+  }catch(err){ console.error(err); alert('Failed to import backup. Make sure you selected a valid JSON export.'); }
+  importFile.value = '';
+});
+
+/* ---------- PDF Export (clean pages, no border) ---------- */
+exportPdfBtn.addEventListener('click', async ()=>{
+  // assemble printable pages (only pages with content)
+  const entries = pages.map((p,i)=> ({ ...p, pageIndex: i })).filter(e => e && (e.title || e.body || e.date));
+  if(entries.length === 0){
+    if(!confirm('No entries found. Export empty journal cover and title page?')) return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // Cover: emulate sequin cover with gradient + title text
+  doc.setFillColor(38, 10, 42);
+  doc.rect(0,0,pageW,pageH,'F');
+  // big title
+  doc.setFontSize(36);
+  doc.setTextColor(240,208,255);
+  doc.text('My Fairy Journal', pageW/2, pageH/3, { align:'center' });
+  doc.setFontSize(14);
+  doc.setTextColor(220,205,255);
+  doc.text(`Exported on ${new Date().toLocaleString()}`, pageW/2, pageH/3 + 28, { align:'center' });
+
+  // Title page
+  doc.addPage();
+  // simulated clean page with slight cream edges by a thin rectangle
+  doc.setFillColor(255, 255, 252); // off-white
+  const margin = 36;
+  doc.rect(margin, margin, pageW - margin*2, pageH - margin*2, 'F');
+  doc.setFontSize(24); doc.setTextColor(20,20,30);
+  doc.text('Entries', margin + 18, margin + 40);
+
+  // iterate entries, render each on its own PDF page
+  for(let i=0;i<entries.length;i++){
+    const e = entries[i];
+    doc.addPage();
+    // background page (off-white)
+    doc.setFillColor(255,255,252);
+    doc.rect(margin, margin, pageW - margin*2, pageH - margin*2, 'F');
+    // date + title
+    doc.setFontSize(12);
+    doc.setTextColor(90,80,90);
+    const dateText = e.date || '';
+    doc.text(dateText, margin + 18, margin + 28);
+    doc.setFontSize(18);
+    doc.setTextColor(30,20,40);
+    doc.text(e.title || '(Untitled)', margin + 18, margin + 56);
+    // body text: wrap
+    doc.setFontSize(12); doc.setTextColor(30,30,30);
+    const body = e.body || '';
+    const lines = doc.splitTextToSize(body, pageW - margin*2 - 36);
+    doc.text(lines, margin + 18, margin + 90);
+    // footer page number
+    doc.setFontSize(10); doc.setTextColor(110,100,110);
+    doc.text(`Page ${i+1} — ${dateText}`, pageW/2, pageH - margin + 6, { align:'center' });
+  }
+
+  // save PDF
+  doc.save(`fairy-journal-${new Date().toISOString().slice(0,10)}.pdf`);
+});
+
+/* set up initial date list and first page rendering on open */
+function refreshAll(){
+  refreshDateIndex();
+  pageCountSpan.textContent = `1/${PAGES}`;
+}
+refreshAll();
+
+/* utility: toggle drawer open/closed wrapper used in modals */
+function setDrawerOpen(open){
+  if(open){
+    // require passcode flow handled earlier
+    drawer.classList.add('open'); lockHinge.classList.add('lock-open'); drawer.setAttribute('aria-hidden','false');
+    renderPage(currentPageIndex);
+  } else {
+    drawer.classList.remove('open'); lockHinge.classList.remove('lock-open'); drawer.setAttribute('aria-hidden','true');
+  }
+}
+
+/* expose createPass function used in modal flows */
+window.showCreatePasscode = showCreatePasscode;
+window.showEnterPasscode = showEnterPasscode;
+
+/* ensure clicking the lock opens correct modal handling (rebind for edge cases) */
+lockBtn.addEventListener('dblclick', (e)=> e.stopPropagation()); // avoid accidental double triggers
+
+</script>
+</body>
+</html>
