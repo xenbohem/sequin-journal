@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Fantasy Sparkle Sequins with Fairy Border</title>
+
+<style>
+body {
+  background: #0d0820;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* OUTER FAIRY BORDER WRAPPER */
+.fairy-border {
+  padding: 22px;
+  border-radius: 28px;
+  position: relative;
+  display: inline-block;
+  
+  /* glowing border gradient */
+  background:
+    linear-gradient(135deg, rgba(212,162,255,0.6), rgba(110,190,255,0.6)) border-box;
+  border: 6px solid transparent;
+  
+  /* shimmer animation */
+  animation: borderGlow 6s ease-in-out infinite alternate;
+  box-shadow: 
+    0 0 25px rgba(180,140,255,0.55),
+    0 0 60px rgba(120,90,255,0.35);
+}
+
+/* faint decorative flourishes in corners */
+.fairy-border::before,
+.fairy-border::after {
+  content: "";
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  opacity: 0.55;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.6));
+}
+
+/* Top-left filigree */
+.fairy-border::before {
+  background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), transparent 70%),
+                    conic-gradient(from 210deg, rgba(255,220,255,0.85), rgba(130,180,255,0.7), transparent 85%);
+  border-radius: 50%;
+  top: -30px; left: -30px;
+  transform: rotate(25deg);
+}
+
+/* Bottom-right filigree */
+.fairy-border::after {
+  background-image: radial-gradient(circle at 60% 60%, rgba(255,255,255,0.8), transparent 70%),
+                    conic-gradient(from 30deg, rgba(130,180,255,0.75), rgba(255,220,255,0.85), transparent 80%);
+  border-radius: 50%;
+  bottom: -30px; right: -30px;
+  transform: rotate(-35deg);
+}
+
+@keyframes borderGlow {
+  0% { box-shadow: 0 0 25px rgba(190,120,255,0.55), 0 0 60px rgba(120,90,255,0.35); }
+  100% { box-shadow: 0 0 35px rgba(255,200,255,0.75), 0 0 80px rgba(160,120,255,0.45); }
+}
+
+/* ORIGINAL PANEL (unchanged except wrapped in border) */
+.panel {
+  width: 420px;
+  height: 260px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 6px;
+  padding: 20px;
+  border-radius: 16px;
+
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.4), transparent 35%),
+    radial-gradient(circle at 80% 30%, rgba(255,255,180,0.3), transparent 40%),
+    radial-gradient(circle at 50% 70%, rgba(180,120,255,0.25), transparent 40%),
+    radial-gradient(circle at 10% 80%, rgba(255,200,255,0.35), transparent 50%),
+    linear-gradient(135deg, #4d2a7f, #1b0f33);
+  background-blend-mode: screen;
+  box-shadow: 0 0 40px rgba(140,80,255,0.5);
+}
+
+/* Sequins (unchanged) */
+.sequin {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.25s ease, background 0.25s ease;
+  transform-style: preserve-3d;
+
+  background: radial-gradient(
+    circle at 30% 30%,
+    #c488ff,
+    #8946d8 60%,
+    #3b165d 100%
+  );
+}
+
+.sequin.flipped {
+  background: radial-gradient(
+    circle at 70% 70%,
+    #5a61ff,
+    #3237a0 60%,
+    #141852 100%
+  );
+}
+
+.sequin:hover {
+  transform: rotateX(55deg);
+}
+
+.sequin::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.8), transparent 40%),
+    radial-gradient(circle at 65% 70%, rgba(255,255,255,0.35), transparent 60%);
+  opacity: 0.6;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="fairy-border">
+  <div class="panel" id="panel"></div>
+</div>
+
+<script>
+// Create 80 sequins exactly as before
+const panel = document.getElementById("panel");
+
+for (let i = 0; i < 80; i++) {
+  const s = document.createElement("div");
+  s.className = "sequin";
+
+  // Hover flip
+  s.addEventListener("mouseenter", () => {
+    if (!s.dataset.locked) s.classList.add("flipped");
+  });
+  s.addEventListener("mouseleave", () => {
+    if (!s.dataset.locked) s.classList.remove("flipped");
+  });
+
+  // Click = stay indigo
+  s.addEventListener("click", () => {
+    s.classList.add("flipped");
+    s.dataset.locked = "true";
+  });
+
+  // Double-click = return to purple
+  s.addEventListener("dblclick", () => {
+    s.classList.remove("flipped");
+    delete s.dataset.locked;
+  });
+
+  panel.appendChild(s);
+}
+</script>
+
+</body>
+</html>
