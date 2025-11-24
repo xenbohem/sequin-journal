@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Fairy Journal</title>
+<style>
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #9b59b6, #8e44ad, #5dade2);
+  font-family: 'Georgia', serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  perspective: 1500px;
+  overflow: hidden;
+}
+
+/* Book container */
+#book-container {
+  position: relative;
+  width: 400px;
+  height: 600px;
+  transform-style: preserve-3d;
+  transition: transform 1s;
+}
+
+/* Covers and pages */
+.book-cover, .book-back, .page {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  backface-visibility: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+.book-cover {
+  background: #7d3c98;
+  z-index: 100;
+  transform-origin: left;
+  transform: rotateY(0deg);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.book-back {
+  background: #6c3483;
+  transform: rotateY(-180deg);
+  z-index: 1;
+}
+
+/* Pages */
+.page {
+  background: #fffdfa;
+  border-radius: 10px;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+  transform-origin: left;
+  transform: rotateY(0deg);
+  z-index: 5;
+  transition: transform 1s, z-index 0s;
+  padding: 20px;
+  cursor: pointer;
+}
+
+/* Flipped page */
+.page.flipped {
+  transform: rotateY(-180deg);
+  z-index: 1;
+}
+
+/* Sequins on cover */
+.sequin {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: purple;
+  transition: transform 0.3s, background 0.3s;
+}
+.sequin.flipped {
+  background: indigo;
+  transform: rotateY(180deg);
+}
+
+/* Lock */
+#book-lock {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: gold;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  z-index: 200;
+  box-shadow: 0 0 5px black;
+}
+
+/* Passcode modal */
+#passcode-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+#passcode-modal .modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 15px;
+  text-align: center;
+}
+
+/* Table of contents */
+#toc {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+.toc-item {
+  background: #f0e6ff;
+  margin: 5px;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  flex: 0 0 45%;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Editable page content */
+.page input, .page textarea {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 5px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-family: 'Georgia', serif;
+}
+.page textarea {
+  height: 100px;
+  resize: vertical;
+}
+</style>
+</head>
+<body>
+
+<div id="book-container">
+  <!-- Front cover -->
+  <div class="book-cover" id="book-cover">
+    <div id="title-bar" style="text-align:center; font-size:24px; color:gold; text-shadow:1px1px3px black;">Fairy Journal</div>
+    <div id="book-lock">🔒</div>
+  </div>
+
+  <!-- Back cover -->
+  <div class="book-back"></div>
+
+  <!-- Pages -->
+  <div class="page" data-month="TOC">
+    <h2>Table of Contents</h2>
+    <div id="toc">
+      <div class="toc-item" data-month="January">January</div>
+      <div class="toc-item" data-month="February">February</div>
+      <div class="toc-item" data-month="March">March</div>
+      <div class="toc-item" data-month="April">April</div>
+      <div class="toc-item" data-month="May">May</div>
+      <div class="toc-item" data-month="June">June</div>
+      <div class="toc-item" data-month="July">July</div>
+      <div class="toc-item" data-month="August">August</div>
+      <div class="toc-item" data-month="September">September</div>
+      <div class="toc-item" data-month="October">October</div>
+      <div class="toc-item" data-month="November">November</div>
+      <div class="toc-item" data-month="December">December</div>
+    </div>
+  </div>
+
+  <!-- Editable page example (January) -->
+  <div class="page" data-month="January">
+    <h2>January</h2>
+    <input type="date" placeholder="Date">
+    <input type="text" placeholder="Title">
+    <textarea placeholder="Write your journal..."></textarea>
+  </div>
+</div>
+
+<!-- Passcode modal -->
+<div id="passcode-modal">
+  <div class="modal-content">
+    <p id="passcode-prompt">Enter 4-letter passcode:</p>
+    <input type="text" id="passcode-input" maxlength="4"/>
+    <br><br>
+    <button id="passcode-submit">Submit</button>
+  </div>
+</div>
+
+<script>
+  // -------------------- Sequins
+  const bookCover = document.getElementById('book-cover');
+  for (let i=0;i<300;i++){
+    const s=document.createElement('div');
+    s.className='sequin';
+    s.style.top=Math.random()*580+'px';
+    s.style.left=Math.random()*380+'px';
+    bookCover.appendChild(s);
+    s.addEventListener('click',()=>{s.classList.toggle('flipped');});
+  }
+
+  // -------------------- Lock & Passcode
+  const lock = document.getElementById('book-lock');
+  const modal = document.getElementById('passcode-modal');
+  const input = document.getElementById('passcode-input');
+  const submit = document.getElementById('passcode-submit');
+  const promptText = document.getElementById('passcode-prompt');
+  const bookContainer = document.getElementById('book-container');
+
+  let storedPasscode = localStorage.getItem('bookPasscode');
+  let bookOpened = false;
+
+  lock.addEventListener('click',()=>{
+    modal.style.display='flex';
+    input.value='';
+    input.focus();
+    promptText.innerText = storedPasscode ? 'Enter 4-letter passcode:' : 'Set a new 4-letter passcode:';
+  });
+
+  submit.addEventListener('click',()=>{
+    const val=input.value.trim();
+    if(val.length!==4){alert('Passcode must be 4 letters'); return;}
+    if(!storedPasscode){
+      localStorage.setItem('bookPasscode',val);
+      storedPasscode=val;
+      alert('Passcode set!');
+      modal.style.display='none';
+      openBook();
+    } else if(val===storedPasscode){
+      modal.style.display='none';
+      openBook();
+    } else {alert('Incorrect passcode');}
+  });
+
+  function openBook(){
+    if(!bookOpened){
+      bookCover.style.transform='rotateY(-160deg)';
+      bookOpened=true;
+    }
+  }
+
+  // -------------------- Page flipping
+  const pages=document.querySelectorAll('.page');
+  pages.forEach((page,i)=>{
+    page.style.zIndex=100-i; // stack pages
+    page.addEventListener('click',()=>{
+      page.classList.toggle('flipped');
+    });
+  });
+
+  // -------------------- TOC navigation
+  const tocItems=document.querySelectorAll('.toc-item');
+  tocItems.forEach(item=>{
+    item.addEventListener('click',()=>{
+      const month=item.dataset.month;
+      pages.forEach(p=>{
+        if(p.dataset.month===month){
+          if(!p.classList.contains('flipped')) p.classList.remove('flipped'); 
+          p.scrollIntoView({behavior:'smooth'});
+        }
+      });
+    });
+  });
+</script>
+</body>
+</html>
